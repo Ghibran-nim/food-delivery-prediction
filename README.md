@@ -31,7 +31,7 @@ Penelitian ini menguji keterkaitan dan kontribusi fitur terhadap kinerja model, 
 | Preparation_Time_min, Courier_Experience_yrs | Fitur numerik |
 | Delivery_Time_min | Target (regresi) dan dasar pembentukan kategori (klasifikasi) |
 
-Kategori klasifikasi (batas awal dari laporan, tidak diubah otomatis):
+Kategori klasifikasi :
 
 | Kategori | Waktu pengiriman |
 |---|---|
