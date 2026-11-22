@@ -14,12 +14,16 @@ Aturan yang dijaga oleh kode ini:
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from src.classification import DT_PARAMS, compute_classification_metrics, train_classifier
+from src.classification import (
+    DT_PARAMS, compute_classification_metrics, compute_confusion_matrix,
+    draw_confusion_matrix, train_classifier,
+)
 from src.data_loader import ExperimentData, FEATURE_COLUMNS
 from src.regression import KNN_PARAMS, compute_regression_metrics, train_regressor
 
@@ -84,6 +88,7 @@ class AblationResult:
     reg_table: pd.DataFrame
     details: pd.DataFrame
     pipelines: dict
+    confusions: dict          # nama skenario -> Confusion Matrix (hanya Decision Tree, data testing)
     n_runs: int
     split_fingerprint: str
     n_test: int
@@ -107,7 +112,7 @@ def run_ablation(data: ExperimentData, progress=None) -> AblationResult:
     scenarios = define_scenarios()
     total = sum(len(sc.models) for sc in scenarios)
     fingerprint = data.split.fingerprint()
-    clf_rows, reg_rows, details, pipelines = [], [], [], {}
+    clf_rows, reg_rows, details, pipelines, confusions = [], [], [], {}, {}
     done = 0
 
     for sc in scenarios:
@@ -121,6 +126,7 @@ def run_ablation(data: ExperimentData, progress=None) -> AblationResult:
             clf_rows.append({"Skenario": sc.name, "Komponen yang dihilangkan": sc.removed,
                              "Jumlah fitur": len(features), **summary})
             pipelines[(sc.key, CLF_NAME)] = pipe
+            confusions[sc.name] = compute_confusion_matrix(data.y_class_test, y_pred)
             details.append(_detail_row(sc, CLF_NAME, features, pipe, False, DT_PARAMS, data, fingerprint))
             done += 1
             if progress:
@@ -138,7 +144,7 @@ def run_ablation(data: ExperimentData, progress=None) -> AblationResult:
             if progress:
                 progress(done, total, f"{sc.name} - {REG_NAME}")
 
-    if len(clf_rows) != EXPECTED_CLF_RUNS or len(reg_rows) != EXPECTED_REG_RUNS:
+    if len(clf_rows) != EXPECTED_CLF_RUNS or len(reg_rows) != EXPECTED_REG_RUNS or len(confusions) != EXPECTED_CLF_RUNS:
         raise RuntimeError(
             f"Jumlah pengujian tidak sesuai laporan: klasifikasi {len(clf_rows)} (seharusnya "
             f"{EXPECTED_CLF_RUNS}), regresi {len(reg_rows)} (seharusnya {EXPECTED_REG_RUNS})."
@@ -149,6 +155,7 @@ def run_ablation(data: ExperimentData, progress=None) -> AblationResult:
         reg_table=_add_deltas(reg_rows, REG_METRICS),
         details=pd.DataFrame(details),
         pipelines=pipelines,
+        confusions=confusions,
         n_runs=len(clf_rows) + len(reg_rows),
         split_fingerprint=fingerprint,
         n_test=len(data.split.test_idx),
@@ -197,6 +204,38 @@ def plot_classification_comparison(clf_table: pd.DataFrame):
         _bar_panel(ax, clf_table, metric)
     fig.suptitle("Ablation Study - Decision Tree Classifier vs Baseline", fontsize=12)
     fig.tight_layout()
+    return fig
+
+
+def confusion_long_table(confusions: dict) -> pd.DataFrame:
+    """Semua Confusion Matrix dalam satu tabel panjang (untuk diunduh sebagai CSV)."""
+    rows = []
+    for name, cm in confusions.items():
+        for actual in cm.index:
+            for predicted in cm.columns:
+                rows.append({
+                    "Skenario": name,
+                    "Kelas aktual": actual.replace("Aktual: ", ""),
+                    "Kelas prediksi": predicted.replace("Prediksi: ", ""),
+                    "Jumlah": int(cm.loc[actual, predicted]),
+                })
+    return pd.DataFrame(rows)
+
+
+def plot_confusion_matrices(confusions: dict, clf_table: pd.DataFrame):
+    """Grid Confusion Matrix seluruh skenario Decision Tree (urutan kelas: Fast, Medium, Slow)."""
+    names = list(confusions)
+    n_cols = 4
+    n_rows = math.ceil(len(names) / n_cols)
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(14, 3.7 * n_rows))
+    axes = axes.ravel()
+    accuracy = clf_table.set_index("Skenario")["Accuracy"]
+    for ax, name in zip(axes, names):
+        draw_confusion_matrix(ax, confusions[name], title=f"{name}\nAccuracy = {accuracy[name]:.3f}", compact=True)
+    for ax in axes[len(names):]:
+        ax.axis("off")
+    fig.suptitle("Confusion Matrix per skenario - Decision Tree (data testing)", fontsize=12)
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
     return fig
 
 

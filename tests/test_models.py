@@ -72,6 +72,15 @@ def test_classification_metrics_known_values():
     assert np.isclose(m["summary"]["F1-score (macro)"], np.mean(f1))
 
 
+def test_confusion_matrix_known_values_and_label_order():
+    y_true = ["Fast", "Fast", "Medium", "Slow", "Slow", "Slow"]
+    y_pred = ["Fast", "Medium", "Medium", "Slow", "Slow", "Fast"]
+    cm = clf.compute_confusion_matrix(y_true, y_pred)
+    assert list(cm.index) == ["Aktual: Fast", "Aktual: Medium", "Aktual: Slow"]
+    assert list(cm.columns) == ["Prediksi: Fast", "Prediksi: Medium", "Prediksi: Slow"]
+    assert cm.values.tolist() == [[1, 1, 0], [0, 1, 0], [1, 0, 2]]
+
+
 def test_regression_metrics_known_values():
     m = reg.compute_regression_metrics([10, 20, 30], [12, 18, 33])
     assert np.isclose(m["MAE"], 7 / 3)

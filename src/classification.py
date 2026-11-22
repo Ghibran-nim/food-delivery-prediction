@@ -65,16 +65,25 @@ class ClassificationResult:
     report: str
 
 
-def evaluate_classifier(pipeline: Pipeline, X_test: pd.DataFrame, y_test, features=None) -> ClassificationResult:
-    features = list(FEATURE_COLUMNS if features is None else features)
-    y_pred = pipeline.predict(X_test[features])
-    metrics = compute_classification_metrics(y_test, y_pred)
-    cm = confusion_matrix(y_test, y_pred, labels=CLASS_ORDER)
-    confusion = pd.DataFrame(
+def compute_confusion_matrix(y_true, y_pred) -> pd.DataFrame:
+    """Confusion Matrix dengan urutan kelas tetap Fast, Medium, Slow.
+
+    Baris = kelas aktual, kolom = kelas prediksi. Dipakai bersama oleh evaluasi
+    baseline dan oleh setiap skenario Decision Tree pada Ablation Study.
+    """
+    cm = confusion_matrix(y_true, y_pred, labels=CLASS_ORDER)
+    return pd.DataFrame(
         cm,
         index=[f"Aktual: {c}" for c in CLASS_ORDER],
         columns=[f"Prediksi: {c}" for c in CLASS_ORDER],
     )
+
+
+def evaluate_classifier(pipeline: Pipeline, X_test: pd.DataFrame, y_test, features=None) -> ClassificationResult:
+    features = list(FEATURE_COLUMNS if features is None else features)
+    y_pred = pipeline.predict(X_test[features])
+    metrics = compute_classification_metrics(y_test, y_pred)
+    confusion = compute_confusion_matrix(y_test, y_pred)
     report = classification_report(y_test, y_pred, labels=CLASS_ORDER, digits=4, zero_division=0)
     return ClassificationResult(pipeline, pd.Series(y_test), y_pred, metrics["summary"],
                                 metrics["per_class"], confusion, report)
@@ -99,11 +108,24 @@ def majority_baseline_accuracy(y_train, y_test) -> tuple[str, float]:
     return majority, acc
 
 
-def plot_confusion_matrix(confusion: pd.DataFrame):
-    fig, ax = plt.subplots(figsize=(5.5, 4.2))
-    sns.heatmap(confusion, annot=True, fmt="d", cmap="Blues", cbar=False, ax=ax)
-    ax.set_title("Confusion Matrix (data testing)")
+def draw_confusion_matrix(ax, confusion: pd.DataFrame, title: str = "Confusion Matrix (data testing)",
+                          compact: bool = False):
+    """Menggambar satu Confusion Matrix pada `ax` (dipakai halaman Classification dan Ablation)."""
+    data = confusion
+    if compact:  # label singkat untuk panel kecil pada grid Ablation Study
+        data = confusion.copy()
+        data.index = [i.replace("Aktual: ", "") for i in data.index]
+        data.columns = [c.replace("Prediksi: ", "") for c in data.columns]
+    sns.heatmap(data, annot=True, fmt="d", cmap="Blues", cbar=False, ax=ax)
+    ax.set_title(title, **({"fontsize": 10} if compact else {}))
     ax.set_xlabel("Kelas prediksi")
     ax.set_ylabel("Kelas aktual")
+    if compact:
+        ax.tick_params(axis="y", rotation=0)
+
+
+def plot_confusion_matrix(confusion: pd.DataFrame):
+    fig, ax = plt.subplots(figsize=(5.5, 4.2))
+    draw_confusion_matrix(ax, confusion)
     fig.tight_layout()
     return fig

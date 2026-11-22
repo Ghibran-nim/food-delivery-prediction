@@ -411,6 +411,19 @@ def page_ablation():
         st.caption("Accuracy, Precision, Recall, F1-score: lebih tinggi umumnya lebih baik. Δ = skenario - baseline.")
         st.dataframe(result.clf_table.round(4))
         show_fig(abl.plot_classification_comparison(result.clf_table))
+        st.subheader("Confusion Matrix per skenario")
+        st.caption(
+            "Dihitung dari prediksi model tiap skenario pada data testing yang sama. Baris = kelas aktual, "
+            "kolom = kelas prediksi, urutan kelas: Fast, Medium, Slow. Eksperimen 7 tidak ada karena hanya menguji KNN."
+        )
+        show_fig(abl.plot_confusion_matrices(result.confusions, result.clf_table))
+        with st.expander("Tabel angka Confusion Matrix per skenario"):
+            for scenario_name, cm in result.confusions.items():
+                st.markdown(f"**{scenario_name}**")
+                st.dataframe(cm)
+        st.download_button("Unduh Confusion Matrix semua skenario (CSV)",
+                           csv_bytes(abl.confusion_long_table(result.confusions)),
+                           "ablation_confusion_matrix.csv", "text/csv")
         st.subheader("Interpretasi")
         for line in abl.interpret_classification(result.clf_table, result.n_test):
             st.markdown(f"- {line}")

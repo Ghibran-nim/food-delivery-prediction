@@ -31,7 +31,7 @@ Penelitian ini menguji keterkaitan dan kontribusi fitur terhadap kinerja model, 
 | Preparation_Time_min, Courier_Experience_yrs | Fitur numerik |
 | Delivery_Time_min | Target (regresi) dan dasar pembentukan kategori (klasifikasi) |
 
-Kategori klasifikasi :
+Kategori klasifikasi (batas awal dari laporan, tidak diubah otomatis):
 
 | Kategori | Waktu pengiriman |
 |---|---|
@@ -103,7 +103,7 @@ python -m pytest tests
 | Data Preprocessing | Missing values, duplikat, outlier, pembentukan target, distribusi kelas, split, missing sebelum/sesudah |
 | Model Classification | Parameter, Accuracy, Precision/Recall/F1 per kelas dan macro, Confusion Matrix, Classification Report |
 | Model Regression | Parameter, MAE, RMSE, R², tabel aktual vs prediksi |
-| Ablation Study | 15 pengujian, tabel hasil dan selisih terhadap baseline, grafik, interpretasi objektif |
+| Ablation Study | 15 pengujian, tabel hasil dan selisih terhadap baseline, grafik, Confusion Matrix setiap skenario Decision Tree, interpretasi objektif |
 | Prediction | Formulir pesanan baru: kategori (Decision Tree) dan estimasi menit (KNN) |
 
 ## 8. Preprocessing
@@ -137,7 +137,7 @@ python -m pytest tests
 
 Total **15 pengujian**: Decision Tree 7 (baseline + eksperimen 1-6) dan KNN 8 (baseline + eksperimen 1-7).
 
-Aturan yang dijaga kode: indeks training-testing, random state, dan parameter model sama di semua skenario; pipeline dibuat baru dan di-fit ulang pada training sesuai fitur yang tersisa; encoding tidak pernah dihilangkan; target tidak berubah. Kode juga memeriksa bahwa jumlah pengujian tepat 15. Tabel hasil memuat nilai metrik dan selisih (Δ = skenario − baseline). Semua angka berasal dari eksekusi model.
+Aturan yang dijaga kode: indeks training-testing, random state, dan parameter model sama di semua skenario; pipeline dibuat baru dan di-fit ulang pada training sesuai fitur yang tersisa; encoding tidak pernah dihilangkan; target tidak berubah. Kode juga memeriksa bahwa jumlah pengujian tepat 15. Tabel hasil memuat nilai metrik dan selisih (Δ = skenario − baseline). Untuk Decision Tree, Confusion Matrix (data testing, urutan kelas Fast, Medium, Slow) ditampilkan pada baseline dan Eksperimen 1-6; Eksperimen 7 tidak memilikinya karena hanya menguji KNN. Semua angka berasal dari eksekusi model.
 
 Cara membaca: penurunan Accuracy/F1/R² atau kenaikan MAE/RMSE terhadap baseline menunjukkan komponen yang dihilangkan **kemungkinan** berkontribusi pada eksperimen tersebut. Karena hanya satu split yang dipakai, selisih kecil dapat berasal dari variasi data. Interpretasi tidak menyimpulkan sebab-akibat.
 
