@@ -33,6 +33,10 @@ def kv_panel(title: str, rows: list[tuple]) -> None:
     _html(markup.panel_kv_html(title, rows))
 
 
+def explain_panel(title: str, definition: str, example: str | None = None, direction: str | None = None) -> None:
+    _html(markup.explain_panel_html(title, definition, example, direction))
+
+
 def callout(kind: str, text: str, title: str | None = None, allow_html: bool = False) -> None:
     _html(markup.callout_html(kind, text, title, allow_html))
 

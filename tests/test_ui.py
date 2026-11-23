@@ -6,7 +6,7 @@ from tests.helpers import make_synthetic_df  # noqa: F401  (juga mengatur sys.pa
 from src import ablation as abl
 from src import data_loader as dl
 from src import prediction as pred
-from ui import charts, markup, theme
+from ui import charts, content, markup, theme
 
 _CACHE = {}
 
@@ -232,3 +232,101 @@ def test_heatmap_annotation_contrast_meets_aa_in_both_themes():
                     ratio = theme.contrast_ratio(to_hex(text_artist.get_color()), to_hex(rgba))
                     assert ratio >= 4.5, (mode_name, text_artist.get_text(), round(ratio, 2))
             plt.close(fig)
+
+
+# --- Penjelasan metrik (Dashboard) dan keterbatasan prediksi (Prediction) ------------
+def test_fmt_id_uses_decimal_comma_and_conventional_rounding():
+    assert content.fmt_id(8.735, 2) == "8,74"          # setengah ke atas, bukan artefak biner
+    assert content.fmt_id(84.5, 1) == "84,5" and content.fmt_id(0.845 * 100, 1) == "84,5"
+    assert content.fmt_id(11.996, 2) == "12,00" and content.fmt_id(0.6902, 2) == "0,69"
+    assert content.fmt_id(69.02, 0) == "69" and content.fmt_id(-0.1234, 2) == "-0,12"
+
+
+def test_metric_groups_cover_four_metrics_grouped_by_task():
+    groups = content.metric_groups()
+    assert [g["task"] for g in groups] == ["Classification - Decision Tree", "Regression - KNN Regressor"]
+    titles = [[m["title"] for m in g["metrics"]] for g in groups]
+    assert titles[0] == ["Accuracy"]
+    assert titles[1] == ["MAE (Mean Absolute Error)", "RMSE (Root Mean Squared Error)", "R² (R-Squared)"]
+    by_title = {m["title"]: m for g in groups for m in g["metrics"]}
+    assert "persentase prediksi kategori yang benar" in by_title["Accuracy"]["definition"].lower()
+    assert "rata-rata selisih absolut" in by_title["MAE (Mean Absolute Error)"]["definition"].lower()
+    assert "penalti lebih besar" in by_title["RMSE (Root Mean Squared Error)"]["definition"].lower()
+    r2 = by_title["R² (R-Squared)"]
+    assert "variasi waktu pengiriman" in r2["definition"] and "bukan persentase prediksi yang benar" in r2["definition"]
+    assert "mendekati 1" in r2["direction"]
+    for name in ("MAE (Mean Absolute Error)", "RMSE (Root Mean Squared Error)"):
+        assert by_title[name]["direction"] == "Semakin kecil, semakin baik"
+    assert by_title["Accuracy"]["direction"] == "Semakin tinggi, semakin baik"
+
+
+def test_metric_examples_use_actual_values_when_models_exist():
+    _, models, _ = _ctx()
+    by_title = {m["title"]: m for g in content.metric_groups(models.clf.summary, models.reg.summary) for m in g["metrics"]}
+    acc = content.fmt_id(models.clf.summary["Accuracy"] * 100, 1)
+    assert f"Accuracy {acc}%" in by_title["Accuracy"]["example"] and by_title["Accuracy"]["example"].startswith("Pada hasil saat ini")
+    mae = content.fmt_id(models.reg.summary["MAE"], 2)
+    assert f"MAE {mae} menit" in by_title["MAE (Mean Absolute Error)"]["example"]
+    rmse = content.fmt_id(models.reg.summary["RMSE"], 2)
+    assert f"RMSE {rmse} menit" in by_title["RMSE (Root Mean Squared Error)"]["example"]
+    r2 = content.fmt_id(models.reg.summary["R²"], 2)
+    assert f"R² {r2}" in by_title["R² (R-Squared)"]["example"]
+
+
+def test_metric_examples_without_dataset_are_labelled_illustrative():
+    for g in content.metric_groups():
+        for m in g["metrics"]:
+            assert m["example"].startswith("Misalnya:"), m["title"]
+
+
+def test_negative_r2_is_not_described_as_explained_variance():
+    groups = content.metric_groups({"Accuracy": 0.5}, {"MAE": 5.0, "RMSE": 6.0, "R²": -0.2})
+    r2_example = [m for g in groups for m in g["metrics"] if m["title"].startswith("R²")][0]["example"]
+    assert "negatif" in r2_example and "variasi waktu pengiriman pada data pengujian" not in r2_example
+
+
+def test_prediction_note_covers_required_points_in_plain_language():
+    items = content.prediction_note_items()
+    text = " ".join(h + " " + t for h, t in items)
+    assert len(items) == 3 and len(text) < 1100                        # ringkas
+    for phrase in ("Decision Tree", "KNN", "kategori", "angka dalam menit", "sendiri-sendiri",
+                   "tidak sepenuhnya sesuai", "bukan otomatis berarti aplikasi salah", "bukan jaminan", "pola data pelatihan"):
+        assert phrase in text, phrase
+    assert f"{dl.FAST_MAX}" in text and f"{dl.MEDIUM_MAX}" in text      # batas kategori berasal dari konstanta inti
+
+
+def test_consistency_note_only_when_two_results_disagree():
+    assert content.consistency_note("Slow", 50.0) is None
+    assert content.consistency_note("Fast", 10.0) is None
+    assert content.consistency_note("Medium", 45.0) is None and content.consistency_note("Slow", 45.0) is not None
+    assert content.consistency_note("Medium", 30.0) is not None and content.consistency_note("Fast", 30.0) is None
+    note = content.consistency_note("Slow", 40.0)
+    assert "Slow" in note and "Medium" in note and "40,0 menit" in note and "bukan otomatis" in note
+    assert content.consistency_note("Slow", float("nan")) is None
+
+
+def test_consistency_note_does_not_modify_predictions():
+    _, models, _ = _ctx()
+    order = {"Distance_km": 8.5, "Weather": "Rainy", "Traffic_Level": "High", "Time_of_Day": "Evening",
+             "Vehicle_Type": "Bike", "Preparation_Time_min": 15, "Courier_Experience_yrs": 3.0}
+    before = pred.predict_new_order(models, order)
+    content.consistency_note(before["kategori"], before["menit"])
+    assert pred.predict_new_order(models, order) == before
+
+
+def test_explain_panel_and_note_list_markup_is_safe_single_line_html():
+    panel = markup.explain_panel_html("<MAE>", "def <b>x</b>", "contoh", "Semakin kecil, semakin baik")
+    assert "&lt;MAE&gt;" in panel and "<b>x</b>" not in panel and "\n" not in panel and "fd-badge primary" in panel
+    lst = markup.note_list_html([("Judul.", "isi <i>x</i>")])
+    assert lst.startswith('<ul class="fd-list">') and "&lt;i&gt;" in lst and "\n" not in lst
+    for mode_name in ("light", "dark"):
+        css = theme.build_css(mode_name)
+        assert ".fd-text" in css and ".fd-list" in css and "$" not in css
+
+
+def test_text_contrast_for_new_explanation_styles():
+    for mode_name in ("light", "dark"):
+        t = theme.tokens(mode_name)
+        assert theme.contrast_ratio(t["text"], t["card"]) >= 4.5            # .fd-text pada panel
+        assert theme.contrast_ratio(t["muted"], t["card"]) >= 4.5           # .fd-text-muted (contoh) pada panel
+        assert theme.contrast_ratio(t["text"], t["tint_primary"]) >= 4.5    # daftar pada callout info

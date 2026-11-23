@@ -111,6 +111,20 @@ def panel_kv_html(title: str, rows: list[tuple]) -> str:
     return f'<div class="fd-panel"><div class="fd-panel-title">{esc(title)}</div>{body}</div>'
 
 
+def explain_panel_html(title: str, definition: str, example: str | None = None, direction: str | None = None) -> str:
+    """Panel penjelasan singkat satu metrik: judul, definisi, contoh, dan arah penilaian."""
+    ex = f'<div class="fd-text fd-text-muted">{esc(example)}</div>' if example else ""
+    tag = f'<div class="fd-panel-tag">{badge_html(direction, "primary")}</div>' if direction else ""
+    return (f'<div class="fd-panel"><div class="fd-panel-title">{esc(title)}</div>'
+            f'<div class="fd-text">{esc(definition)}</div>{ex}{tag}</div>')
+
+
+def note_list_html(items: list[tuple]) -> str:
+    """Daftar poin singkat (judul tebal + teks) untuk isi callout."""
+    lis = "".join(f"<li><b>{esc(head)}</b> {esc(text)}</li>" for head, text in items)
+    return f'<ul class="fd-list">{lis}</ul>'
+
+
 def callout_html(kind: str, text: str, title: str | None = None, allow_html: bool = False) -> str:
     kind = kind if kind in ("info", "success", "warning", "danger") else "info"
     cls = "fd-callout" if kind == "info" else f"fd-callout {kind}"

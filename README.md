@@ -75,13 +75,14 @@ food-delivery-prediction/
 │   ├── markup.py           # pembuat HTML: kartu, tabel, callout, panel
 │   ├── components.py       # pembungkus Streamlit untuk komponen
 │   ├── charts.py           # grafik bertema Light/Dark
+│   ├── content.py          # teks penjelasan metrik dan keterbatasan prediksi
 │   └── pages.py            # 8 halaman dan sidebar
 └── tests/
     ├── helpers.py          # data sintetis untuk test
     ├── test_preprocessing.py
     ├── test_models.py
     ├── test_ablation.py
-    └── test_ui.py          # tema, kontras, HTML, kesetiaan grafik terhadap data
+    └── test_ui.py          # tema, kontras, HTML, grafik, teks penjelasan
 ```
 
 ## 6. Instalasi dan menjalankan (Windows)
@@ -105,14 +106,14 @@ python -m pytest tests
 
 | Halaman | Isi |
 |---|---|
-| Dashboard | Ringkasan dataset, kinerja baseline, keterbatasan penelitian |
+| Dashboard | Ringkasan dataset, kinerja baseline, penjelasan metrik evaluasi (Accuracy, MAE, RMSE, R²), keterbatasan penelitian |
 | Upload Dataset | Unggah CSV, kecocokan kolom dengan laporan, tipe data, contoh data |
 | Exploratory Data Analysis | Statistik deskriptif, distribusi, hubungan dengan waktu pengiriman, korelasi |
 | Data Preprocessing | Missing values, duplikat, outlier, pembentukan target, distribusi kelas, split, missing sebelum/sesudah |
 | Model Classification | Parameter, Accuracy, Precision/Recall/F1 per kelas dan macro, Confusion Matrix, Classification Report |
 | Model Regression | Parameter, MAE, RMSE, R², tabel aktual vs prediksi |
 | Ablation Study | 7 bagian: ringkasan eksperimen, hasil Decision Tree, hasil KNN, perbandingan dengan baseline, visualisasi, grid 7 Confusion Matrix, detail dan unduhan CSV |
-| Prediction | Formulir pesanan baru: kategori (Decision Tree) dan estimasi menit (KNN) |
+| Prediction | Penjelasan perbedaan dan keterbatasan kedua model, formulir pesanan baru: kategori (Decision Tree) dan estimasi menit (KNN) |
 
 ## 8. Tampilan dan tema
 

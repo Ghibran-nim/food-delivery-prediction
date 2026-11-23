@@ -223,6 +223,11 @@ CSS_TEMPLATE = Template(r"""
 
 .stApp .fd-panel { background: ${card}; border: 1px solid ${border}; border-radius: 12px; padding: 1rem 1.15rem; box-shadow: ${shadow}; margin-bottom: 0.85rem; }
 .stApp .fd-panel-title { font-size: 0.95rem; font-weight: 600; color: ${text}; margin-bottom: 0.45rem; }
+.stApp .fd-text { font-size: 0.86rem; line-height: 1.5; color: ${text}; margin: 0.35rem 0; }
+.stApp .fd-text-muted { color: ${muted}; }
+.stApp .fd-panel-tag { margin-top: 0.55rem; }
+.stApp .fd-list { margin: 0.35rem 0 0 1.15rem; padding: 0; }
+.stApp .fd-list li { margin: 0.3rem 0; line-height: 1.5; color: ${text}; }
 .stApp .fd-kv { display: flex; justify-content: space-between; gap: 1rem; padding: 0.38rem 0; border-bottom: 1px solid ${border}; font-size: 0.85rem; }
 .stApp .fd-kv:last-child { border-bottom: none; }
 .stApp .fd-kv-key { color: ${muted}; }

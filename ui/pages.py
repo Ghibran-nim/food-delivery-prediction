@@ -18,7 +18,7 @@ from src import eda
 from src import prediction as pred
 from src import preprocessing as prep
 from src import regression as reg_mod
-from ui import charts, theme
+from ui import charts, content, markup, theme
 from ui import components as c
 
 RESEARCH_TITLE = (
@@ -80,6 +80,18 @@ def _metric_items(summary: dict, accent: bool = True) -> list[dict]:
     return [{"label": name, "value": _fmt(value), "accent": accent} for name, value in summary.items()]
 
 
+def _explain_metrics(models=None) -> None:
+    """Bagian 'Memahami Metrik Evaluasi' (Dashboard). Contoh memakai nilai aktual bila model sudah ada."""
+    c.section(content.SECTION_TITLE, content.SECTION_DESC)
+    groups = content.metric_groups(models.clf.summary if models else None, models.reg.summary if models else None)
+    for group in groups:
+        c.side_label(group["task"])
+        for col, metric in zip(st.columns(len(group["metrics"])), group["metrics"]):
+            with col:
+                c.explain_panel(metric["title"], metric["definition"], metric["example"], metric["direction"])
+    st.caption(content.EXTRA_CAPTION)
+
+
 # ---------------------------------------------------------------------------
 # Halaman
 # ---------------------------------------------------------------------------
@@ -96,6 +108,7 @@ def page_dashboard():
     if data is None:
         c.callout("info", "Mulai dari halaman Upload Dataset untuk memuat Food_Delivery_Times.csv.")
         st.button("Buka Upload Dataset", type="primary", key="dash_upload", on_click=goto, args=("Upload Dataset",))
+        _explain_metrics()
         return
 
     raw = st.session_state["raw_df"]
@@ -118,6 +131,8 @@ def page_dashboard():
     c.metric_cards(_metric_items(models.reg.summary))
     c.kv_panel("Parameter tetap", [(k, v) for k, v in reg_mod.KNN_PARAMS.items()])
     st.caption("Nilai dihitung langsung dari model yang dilatih pada dataset aktif. Hasil bukan hubungan sebab-akibat.")
+
+    _explain_metrics(models)
 
     c.section("Navigasi cepat")
     targets = [n for n in PAGES if n != "Dashboard"]
@@ -538,6 +553,8 @@ def page_prediction():
     options = pred.get_form_options(data.X_train)
     ranges = options["ranges"]
     st.write("Masukkan karakteristik pesanan baru. Prediksi memakai model dan pipeline baseline yang sudah dilatih.")
+    c.callout("info", markup.note_list_html(content.prediction_note_items()),
+              title=content.PREDICTION_NOTE_TITLE, allow_html=True)
 
     with st.form("form_prediksi"):
         c1, c2 = st.columns(2)
@@ -571,6 +588,9 @@ def page_prediction():
         c.result_card("Estimasi waktu pengiriman (KNN)", f"{result['menit']:.1f} menit")
     for warning in pred.range_warnings(order, ranges):
         c.callout("warning", warning)
+    note = content.consistency_note(result["kategori"], result["menit"])
+    if note:
+        c.callout("info", note)
     c.callout("info", pred.DISCLAIMER)
 
 
