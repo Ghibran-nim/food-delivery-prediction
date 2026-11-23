@@ -1,0 +1,6 @@
+# Tema dasar Streamlit. Light/Dark Mode diatur oleh aplikasi (toggle "Mode gelap" di sidebar)
+# melalui CSS pada ui/theme.py, sehingga seluruh komponen kustom mengikuti palet yang sama.
+[theme]
+base = "light"
+primaryColor = "#2563EB"
+font = "sans serif"
